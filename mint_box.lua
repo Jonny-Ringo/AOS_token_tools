@@ -1,6 +1,6 @@
 --[[
 -- Mint Box 
--- Version: 0.1
+-- Version: 0.1.2
 
 -- Requires token blueprint to be loaded in order to run.
 -- This minting contract extension is loaded with the token standard. 
@@ -13,12 +13,14 @@
 -- 3. Change the Ticker, Logo, and Name in this file to your desired settings
 -- 4. > .load path/to/mint_box.lua
 
+
 ]]
 
 local json = require('json')
+local initialMinted = tonumber(TotalSupply) or 0
 BuyToken = "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10" -- $wAR
 MaxMint = MaxMint or 1000000000000000000 -- 1,000,000.000000000000
-Minted = Minted or 0
+Minted = Minted or initialMinted
 Name = "Mint"
 Ticker = "MINT"
 Logo = "mw4YSN8r581cqIHFgzAtrbOB4JqFzGCDI6yhcdqT0po"
@@ -32,44 +34,67 @@ local function announce(msg, pids)
   
   
   -- MINT
-  Handlers.prepend(
-    "Mint",
-    function(m)
-      return m.Action == "Credit-Notice" and m.From == BuyToken
-    end,
-    function(m) -- Mints tokens at 1:1000 for the payment token
-      local requestedAmount = tonumber(m.Quantity)
-      local actualAmount = requestedAmount * 1000
-      -- if over limit refund difference
-      if (Minted + requestedAmount) > MaxMint then
-        -- if not enough tokens available send a refund...
-          Send({
-            Target = BuyToken,
-            Action = "Transfer",
-            Recipient = m.Sender,
-            Quantity = tostring(requestedAmount),
-            Data = "Mint is Maxed - Refund"
-          })
-          print('send refund')
-        Send({Target = m.Sender, Data = "Mint Maxed, Refund dispatched"})
-        return
-      end
+Handlers.prepend(
+  "Mint",
+  function(m)
+    return m.Action == "Credit-Notice" and m.From == BuyToken
+  end,
+  function(m) -- Mints tokens at 1:1000 for the payment token
+    local requestedAmount = tonumber(m.Quantity)
+    local actualAmount = requestedAmount * 1000
+
+    -- Calculate the remaining mintable amount
+    local remainingMintable = MaxMint - Minted
+
+    if remainingMintable <= 0 then
+      -- If no tokens can be minted, refund the entire amount
+      Send({
+        Target = BuyToken,
+        Action = "Transfer",
+        Recipient = m.Sender,
+        Quantity = tostring(requestedAmount),
+        Data = "Mint is Maxed - Refund"
+      })
+      print('send refund')
+      Send({Target = m.Sender, Data = "Mint Maxed, Refund dispatched"})
+      return
+    end
+
+    -- Calculate the actual amount to mint and the amount to refund
+    local mintAmount = math.min(actualAmount, remainingMintable)
+    local refundAmount = (actualAmount - mintAmount) / 1000
+
+    -- Mint the allowable amount
+    if mintAmount > 0 then
       assert(type(Balances) == "table", "Balances not found!")
       local prevBalance = tonumber(Balances[m.Sender]) or 0
-      Balances[m.Sender] = tostring(math.floor(prevBalance + actualAmount))
-      Minted = Minted + actualAmount
-      print("Minted " .. tostring(actualAmount) .. " to " .. m.Sender)
-      Send({Target = m.Sender, Data = "Successfully Minted " .. actualAmount})
+      Balances[m.Sender] = tostring(math.floor(prevBalance + mintAmount))
+      Minted = Minted + mintAmount
+      print("Minted " .. tostring(mintAmount) .. " to " .. m.Sender)
+      Send({Target = m.Sender, Data = "Successfully Minted " .. mintAmount})
     end
-  )
-  
-  local function continue(fn) 
-    return function (msg) 
-      local result = fn(msg)
-      if result == -1 then 
-        return "continue"
-      end
-      return result
+
+    if refundAmount > 0 then
+      -- Send the refund for the excess amount
+      Send({
+        Target = BuyToken,
+        Action = "Transfer",
+        Recipient = m.Sender,
+        Quantity = tostring(refundAmount),
+        Data = "Mint is Maxed - Partial Refund"
+      })
+      print('send partial refund of ' .. tostring(refundAmount))
+      Send({Target = m.Sender, Data = "Mint Maxed, Partial Refund dispatched"})
     end
   end
-  
+)
+
+local function continue(fn) 
+  return function (msg) 
+    local result = fn(msg)
+    if result == -1 then 
+      return "continue"
+    end
+    return result
+  end
+end
