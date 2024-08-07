@@ -9,7 +9,7 @@
 -- Steps to install 
 
 -- 1. > .load-blueprint token
--- 2. Save this min_box.lua file to your local system. 
+-- 2. Save this mint.lua file to your local system. 
 -- 3. Change the Ticker, Logo, and Name in this file to your desired settings
 -- 4. > .load path/to/mint_box.lua
 
