@@ -1,5 +1,5 @@
 --[[
--- Mint Box 
+-- Mint 🍃 
 -- Version: 0.1.2
 
 -- Requires token blueprint to be loaded in order to run.
