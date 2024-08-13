@@ -2,6 +2,8 @@
 -- Mint 🍃 
 -- Version: 0.1.2
 
+--TODO: Fix partial refund math
+
 -- Requires token blueprint to be loaded in order to run.
 -- This minting contract extension is loaded with the token standard. 
 -- The default settings mints 1000 of the given token for every 1 $wAR depositted.
@@ -12,7 +14,6 @@
 -- 2. Save this mint.lua file to your local system. 
 -- 3. Change the Ticker, Logo, and Name in this file to your desired settings
 -- 4. > .load path/to/mint.lua
-
 
 ]]
 
@@ -63,6 +64,9 @@ Handlers.prepend(
     -- Calculate the actual amount to mint and the amount to refund
     local mintAmount = math.min(actualAmount, remainingMintable)
     local refundAmount = (actualAmount - mintAmount) / 1000
+
+    -- Ensure refundAmount is treated as an integer
+    refundAmount = tonumber(string.format("%.0f", refundAmount))
 
     -- Mint the allowable amount
     if mintAmount > 0 then
