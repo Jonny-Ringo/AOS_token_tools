@@ -1,8 +1,6 @@
 --[[
 -- Mint 🍃 
--- Version: 0.1.2
-
---TODO: Fix partial refund math
+-- Version: 0.1.3
 
 -- Requires token blueprint to be loaded in order to run.
 -- This minting contract extension is loaded with the token standard. 
