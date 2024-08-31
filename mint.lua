@@ -1,6 +1,6 @@
 --[[
 -- Mint 🍃 
--- Version: 0.1.3
+-- Version: 0.1.4
 
 -- Requires token blueprint to be loaded in order to run.
 -- This minting contract extension is loaded with the token standard. 
@@ -19,6 +19,7 @@ local json = require('json')
 local initialMinted = tonumber(TotalSupply) or 0
 BuyToken = "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10" -- $wAR
 MaxMint = MaxMint or 1000000000000000000 -- 1,000,000.000000000000
+Multiplier = 1000
 Minted = Minted or initialMinted
 Name = "Mint"
 Ticker = "MINT"
@@ -40,7 +41,7 @@ Handlers.prepend(
   end,
   function(m) -- Mints tokens at 1:1000 for the payment token
     local requestedAmount = tonumber(m.Quantity)
-    local actualAmount = requestedAmount * 1000
+    local actualAmount = requestedAmount * Multiplier
 
     -- Calculate the remaining mintable amount
     local remainingMintable = MaxMint - Minted
@@ -61,7 +62,7 @@ Handlers.prepend(
 
     -- Calculate the actual amount to mint and the amount to refund
     local mintAmount = math.min(actualAmount, remainingMintable)
-    local refundAmount = (actualAmount - mintAmount) / 1000
+    local refundAmount = (actualAmount - mintAmount) / Multiplier
 
     -- Ensure refundAmount is treated as an integer
     refundAmount = tonumber(string.format("%.0f", refundAmount))
